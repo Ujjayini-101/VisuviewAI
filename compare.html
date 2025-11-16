@@ -16,77 +16,49 @@
   <script src="./js/auth.js" defer></script>
 
   <style>
-    /* make iframe fill remaining viewport under header (header is ~64px) */
     :root { --header-h: 64px; }
     html, body { height: 100%; margin: 0; }
-    /* ensure no horizontal scroll */
-    body { overflow-x: hidden; }
+    body { overflow-x: hidden; background:#000; color:#fff; }
 
-    /* iframe container — full height below header */
-    #iframe-wrap {
-      height: calc(100vh - var(--header-h));
-      width: 100%;
-      background: #000;
-    }
+    /* iframe wrapper occupies viewport excluding header height */
+    #iframe-wrap { height: calc(100vh - var(--header-h)); width: 100%; background: #000; }
 
-    #timeseries-iframe {
-      width: 100%;
-      height: 100%;
-      border: 0;
-      display: block;
-      background: transparent;
-    }
+    #app-iframe { width: 100%; height: 100%; border: 0; display:block; background: transparent; }
 
-    /* keep the navbar z-index so it stays above iframe if desired */
-    header { z-index: 9999; position: sticky; top: 0; }
+    /* small status area (right side) */
+    #embedStatus { color: #e5e7eb; font-size: 0.95rem; }
+    #openNewTab { color: #f87171; text-decoration: none; margin-left: 1rem; }
   </style>
 </head>
+<body class="min-h-screen">
 
-<body class="m-0 overflow-x-hidden min-h-screen text-neutral-100 bg-neutral-950">
   <!-- ===== KEEP your existing header/navbar exactly as you provided ===== -->
   <header class="sticky top-0 z-50 border-b border-red-600/50 bg-black/60 backdrop-blur-md">
     <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
       <div class="flex items-center gap-3">
-        <button id="mobileMenuBtn"
-                class="md:hidden p-2 rounded-md bg-neutral-900/50 ring-1 ring-red-700/30 hover:bg-neutral-900/60 focus:outline-none"
-                aria-label="Open menu">
-          <svg class="w-5 h-5 text-red-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 6h18M3 12h18M3 18h18"></path>
-          </svg>
+        <button id="mobileMenuBtn" class="md:hidden p-2 rounded-md bg-neutral-900/50 ring-1 ring-red-700/30 hover:bg-neutral-900/60 focus:outline-none" aria-label="Open menu">
+          <svg class="w-5 h-5 text-red-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"></path></svg>
         </button>
 
-       <img src="./assets/logo.png" alt="VisuViewAI Logo"
-        class="h-10 w-10 object-contain drop-shadow-[0_0_14px_rgba(239,68,68,0.45)]">
-       <span class="font-semibold tracking-wide text-red-400 text-xl md:text-2xl">VisuViewAI</span>
-
+        <img src="./assets/logo.png" alt="VisuViewAI Logo" class="h-10 w-10 object-contain drop-shadow-[0_0_14px_rgba(239,68,68,0.45)]">
+        <span class="font-semibold tracking-wide text-red-400 text-xl md:text-2xl">VisuViewAI</span>
       </div>
 
       <nav class="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-10">
-        <a href="index.html"
-           class="rounded-lg border border-red-600/30 bg-black/40 px-4 py-2 text-base text-neutral-300 hover:text-red-300 transition">Home</a>
-        <a href="compare.html"
-           class="rounded-lg border border-red-600/30 bg-black/40 px-4 py-2 text-base text-neutral-300 hover:text-red-300 transition">Compare Image</a>
-        <a href="chats.html"
-           class="rounded-lg border border-red-600/30 bg-black/40 px-4 py-2 text-base text-neutral-300 hover:text-red-300 transition">AI Assistant</a>
+        <a href="index.html" class="rounded-lg border border-red-600/30 bg-black/40 px-4 py-2 text-base text-neutral-300 hover:text-red-300 transition">Home</a>
+        <a href="compare.html" class="rounded-lg border border-red-600/30 bg-black/40 px-4 py-2 text-base text-neutral-300 hover:text-red-300 transition">Compare Image</a>
+        <a href="chats.html" class="rounded-lg border border-red-600/30 bg-black/40 px-4 py-2 text-base text-neutral-300 hover:text-red-300 transition">AI Assistant</a>
       </nav>
 
       <div class="flex items-center gap-2">
-        <button id="authToggleBtn" type="button"
-          class="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium shadow-[0_0_8px_rgba(239,68,68,.45)] hover:bg-red-500 transition
-               md:rounded-lg md:px-5 md:py-2 md:text-base md:shadow-[0_0_12px_rgba(239,68,68,.45)]">Login / Sign Up</button>
+        <button id="authToggleBtn" type="button" class="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium shadow-[0_0_8px_rgba(239,68,68,.45)] hover:bg-red-500 transition md:rounded-lg md:px-5 md:py-2 md:text-base md:shadow-[0_0_12px_rgba(239,68,68,.45)]">Login / Sign Up</button>
 
-        <button id="mobileNavToggle"
-                class="md:hidden inline-flex items-center justify-center p-2 rounded-md bg-neutral-900/50 ring-1 ring-red-700/30 hover:bg-neutral-900/60 focus:outline-none"
-                aria-expanded="false" aria-controls="mobileNavMenu" aria-label="Open navigation menu">
-          <svg class="w-4 h-4 text-red-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M6 9l6 6 6-6"></path>
-          </svg>
+        <button id="mobileNavToggle" class="md:hidden inline-flex items-center justify-center p-2 rounded-md bg-neutral-900/50 ring-1 ring-red-700/30 hover:bg-neutral-900/60 focus:outline-none" aria-expanded="false" aria-controls="mobileNavMenu" aria-label="Open navigation menu">
+          <svg class="w-4 h-4 text-red-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"></path></svg>
         </button>
       </div>
 
-      <!-- Mobile dropdown (kept if you still want mobile nav) -->
-      <div id="mobileNavMenu"
-           class="md:hidden absolute right-4 top-full mt-2 min-w-[180px] rounded-lg border border-red-600/30 bg-black/60 backdrop-blur-md shadow-[0_6px_30px_-10px_rgba(0,0,0,.6)] overflow-hidden scale-y-0 origin-top-right transition-transform duration-150"
+      <div id="mobileNavMenu" class="md:hidden absolute right-4 top-full mt-2 min-w-[180px] rounded-lg border border-red-600/30 bg-black/60 backdrop-blur-md shadow-[0_6px_30px_-10px_rgba(0,0,0,.6)] overflow-hidden scale-y-0 origin-top-right transition-transform duration-150"
            style="transform-origin: top right;">
         <nav class="flex flex-col">
           <a href="index.html" class="block px-4 py-3 text-lg text-neutral-300 hover:bg-neutral-900/40 hover:text-red-300 border-b border-red-600/20">Home</a>
@@ -94,7 +66,6 @@
           <a href="chats.html" class="block px-4 py-3 text-lg text-neutral-300 hover:bg-neutral-900/40 hover:text-red-300">AI Assistant</a>
         </nav>
       </div>
-
     </div>
   </header>
   <!-- ===== end header ===== -->
@@ -102,8 +73,8 @@
   <!-- ===== App switcher (under the navbar) ===== -->
   <div id="embed-controls" class="mx-auto max-w-7xl px-4 py-3 flex items-center gap-3 bg-transparent">
     <div class="flex gap-2">
-      <button id="btnTimeseries" class="px-3 py-1 rounded-md bg-neutral-900/70 ring-1 ring-red-600/40 text-white font-medium">Upload & Compare</button>
-      <button id="btnCompare" class="px-3 py-1 rounded-md bg-neutral-900/40 ring-1 ring-red-600/30 text-neutral-300">Upload & Compare</button>
+      <button id="btnCompare" class="px-3 py-1 rounded-md bg-neutral-900/40 ring-1 ring-red-600/30 text-neutral-300">Upload & Compare Portal</button>
+      <button id="btnTimeseries" class="px-3 py-1 rounded-md bg-neutral-900/70 ring-1 ring-red-600/40 text-white font-medium">Time-series Portal</button>
     </div>
 
     <div class="ml-auto flex items-center gap-3">
