@@ -1,0 +1,303 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* project variables */
+:root {
+  --chat-max-width: 60rem;
+  --bubble-max-mobile: 92%;
+  /* ... */
+}
+
+/* Put @apply rules inside @layer components */
+@layer components {
+  .top-composer-box {
+    @apply rounded-[0.75rem] border p-2 relative;
+    background-color: rgba(0,0,0,0.36); /* exact alpha you used */
+    border-color: rgba(239,68,68,0.12);
+    box-shadow: 0 10px 30px -14px rgba(239,68,68,.25);
+    backdrop-filter: blur(6px);
+  }
+
+  .send-btn {
+    @apply rounded-full font-semibold text-white;
+    background: #ef4444;
+    padding: .5rem .9rem;
+    box-shadow: 0 6px 20px -10px rgba(239,68,68,0.45);
+  }
+
+   /* === BEFORE / AFTER PORTAL (Tailwind-native styles) === */
+
+  .ba-wrap {
+    @apply relative overflow-hidden rounded-lg shadow-[0_0_30px_-10px_rgba(239,68,68,0.45)];
+    @apply aspect-[1.25/1]; /* keep 1.25:1 ratio (desktop) */
+  }
+
+  .ba-img {
+    @apply block w-full h-full object-cover;
+  }
+
+  .ba-after-wrap {
+    @apply absolute top-0 left-0 h-full w-1/2 overflow-hidden transition-[width]
+           duration-[160ms] ease-[cubic-bezier(.2,.9,.2,1)];
+  }
+
+  /* Divider + Handle */
+  .ba-divider {
+    @apply absolute top-0 bottom-0 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none;
+  }
+
+  .ba-line {
+    @apply absolute inset-y-0 w-[2px] bg-gradient-to-b from-white/90 to-white/10 shadow-[0_0_12px_rgba(0,0,0,0.6)];
+  }
+
+  .ba-handle {
+    @apply relative z-20 flex items-center justify-center w-9 h-9 rounded-full bg-white/95
+           shadow-lg pointer-events-auto -translate-x-1/2 transform
+           transition-transform duration-150 ease-in-out;
+  }
+
+  .ba-handle:active {
+    @apply scale-95 shadow-[0_10px_20px_rgba(0,0,0,0.4)];
+  }
+
+  .ba-handle:focus {
+    @apply outline outline-[2px] outline-red-500/85 outline-offset-[2px];
+  }
+
+  /* Mobile tweaks */
+  @media (max-width: 640px) {
+    .ba-wrap {
+      @apply aspect-auto h-[220px];
+    }
+
+    .ba-handle {
+      @apply w-9 h-9; /* already small, can reduce to w-8 h-8 if you want tighter */
+    }
+  }
+
+  /* === AI Assistant callout styles (Tailwind + raw CSS for SVG & animation) === */
+
+  /* --- base dashed line (hidden by default) --- */
+  .ai-line {
+    stroke: #7f1d1d;
+    stroke-width: 4.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    stroke-dasharray: 2000;
+    stroke-dashoffset: 2000;
+    opacity: 0;
+    filter: drop-shadow(0 10px 18px rgba(239,68,68,0.18));
+    transition: opacity 160ms linear;
+  }
+
+  /* side-specific halo/glow paths (right = red, left = soft white) */
+    /* side-specific halo/glow paths (both sides white glow now) */
+  .ai-line.glow-right {
+    stroke: #ffffff;            /* white glow (RIGHT) */
+    stroke-width: 8;
+    opacity: 0;
+    filter: blur(6px) drop-shadow(0 10px 24px rgba(255,255,255,0.18));
+    mix-blend-mode: screen;
+  }
+  .ai-line.glow-left {
+    stroke: #ffffff;            /* softer white glow (LEFT) */
+    stroke-width: 7;
+    opacity: 0;
+    filter: blur(6px) drop-shadow(0 10px 24px rgba(255,255,255,0.22));
+    mix-blend-mode: screen;
+  }
+
+
+  /* make drawn lines persist visually and animate them */
+  .ai-line.draw {
+    opacity: 1;
+    animation: ai-line-draw 720ms cubic-bezier(.2,.9,.2,1) forwards;
+    animation-fill-mode: forwards;    /* persist */
+    stroke-dashoffset: 0;             /* safety: persist even if animation interrupted */
+  }
+  .ai-line.glow-right.draw,
+  .ai-line.glow-left.draw {
+    opacity: .85;
+    animation: ai-line-draw 900ms cubic-bezier(.2,.9,.2,1) forwards;
+    animation-fill-mode: forwards;
+    stroke-dashoffset: 0;
+  }
+
+  /* dot visibility & scale */
+  .ai-dot {
+    opacity: 0;
+    transform: scale(.6);
+    transition: opacity 260ms ease, transform 260ms cubic-bezier(.2,.9,.2,1);
+  }
+  .ai-dot.show {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* arrowhead helper (use class ai-arrowhead on polygon elements) */
+  .ai-arrowhead {
+    opacity: 0;
+    transition: opacity 160ms linear;
+  }
+  .ai-arrowhead.show { opacity: 1; }
+
+  /* text reveal + lift so it sits neatly at arrow end */
+  .ai-text-reveal {
+    opacity: 0;
+    transform: translateX(28px) translateY(14px);
+    transition: transform 520ms cubic-bezier(.15,.9,.25,1), opacity 420ms ease;
+  }
+  .ai-text-reveal.show {
+    opacity: 1;
+    transform: translateX(0) translateY(-16px);
+    transition-delay: 920ms;
+  }
+
+  .ai-text-reveal-left {
+    opacity: 0;
+    transform: translateX(-28px) translateY(12px);
+    transition: transform 520ms cubic-bezier(.15,.9,.25,1), opacity 420ms ease;
+  }
+  .ai-text-reveal-left.show {
+    opacity: 1;
+    transform: translateX(0) translateY(-10px);
+    transition-delay: 920ms;
+  }
+
+  /* small helper to force visible line if JS sets stroke-dashoffset explicitly */
+  .ai-line.persistent {
+    opacity: 1 !important;
+    stroke-dashoffset: 0 !important;
+  }
+
+  /* micro-accessible focus outline for interactive text (if needed) */
+  .ai-text-reveal:focus-visible,
+  .ai-text-reveal-left:focus-visible {
+    outline: 3px solid rgba(239,68,68,0.14);
+    outline-offset: 4px;
+  }
+
+  /* include keyframes inside the layer so tailwind collects them if using JIT */
+  @keyframes ai-line-draw {
+    0%   { stroke-dashoffset: 2000; opacity: 1; }
+    80%  { stroke-dashoffset: 24; }
+    100% { stroke-dashoffset: 0; opacity: 1; }
+  }
+  @keyframes ai-line-draw-glow {
+    0%   { stroke-dashoffset: 2000; opacity: 0.22; }
+    70%  { stroke-dashoffset: 120; opacity: 0.6; }
+    100% { stroke-dashoffset: 0; opacity: 0.85; }
+  }
+
+  /* ===== Auth waves: anchored to viewport and thinned (canvas-compatible) ===== */
+  .auth-wave {
+    width: 100%;
+    height: 100%;
+    display: block;
+    transform-origin: center bottom;
+    transition: transform 420ms cubic-bezier(.18,.9,.28,1), opacity 260ms ease;
+    transform: translateY(22%);
+    opacity: 0;
+    pointer-events: none;
+    shape-rendering: geometricPrecision;
+    will-change: transform, opacity;
+  }
+
+  .auth-wave-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+    shape-rendering: geometricPrecision;
+    will-change: transform, opacity;
+  }
+
+  .auth-wave.show {
+    transform: translateY(8%);
+    opacity: 1;
+  }
+
+  #authWaves {
+    position: fixed;
+    left: 50%;
+    bottom: 0;
+    width: 200%;
+    transform: translateX(-50%);
+    pointer-events: none;
+    overflow: visible;
+    z-index: 100000;
+    height: 62vh;
+    display: block;
+  }
+
+  @media (max-width: 640px) {
+    #authWaves { height: 28vh; width: 220%; }
+  }
+
+  @media (max-width: 420px) {
+    .auth-wave { transform: translateY(18%); }
+    .auth-wave.show { transform: translateY(8%); }
+  }
+
+  #authWaves svg path { shape-rendering: geometricPrecision; }
+
+  #authCard { z-index: 100001; transform: translateY(14px) scale(.98); opacity: 0; transition: transform 300ms cubic-bezier(.2,.95,.28,1), opacity 260ms ease; }
+  #authCard.show { transform: translateY(0) scale(1); opacity: 1; }
+  #authCard.hide { transform: translateY(14px) scale(.98); opacity: 0; }
+
+  /* === CAR TILT / JUGGLE === */
+  .tilt-wrap {
+    @apply relative will-change-transform;
+    perspective: 1600px;              /* depth */
+    -webkit-perspective: 1600px;
+  }
+
+  .tilt-img {
+    @apply block will-change-transform;
+    transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
+    transition: transform 420ms cubic-bezier(.18,.9,.28,1);
+  }
+
+  .tilt-img.is-hovering {
+    transition: transform 160ms cubic-bezier(.2,.9,.2,1);
+  }
+
+  .tilt-img.enter-pop {
+    transition: transform 220ms cubic-bezier(.18,.9,.28,1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tilt-img {
+      transition: none !important;
+    }
+  }
+
+
+}
+
+/* keep scrollbars, keyframes, small helpers outside @layer */
+.scroll-slim::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-slim::-webkit-scrollbar-thumb { background-color: rgba(239,68,68,0.35); border-radius: 9999px; border: 2px solid rgba(0,0,0,0.5); }
+
+@keyframes micPulse {
+  0%   { box-shadow: 0 0 10px rgba(239,68,68,0.42), 0 0 28px rgba(239,68,68,0.18); transform: scale(1); }
+  50%  { box-shadow: 0 0 18px rgba(239,68,68,0.82), 0 0 40px rgba(239,68,68,0.36); transform: scale(1.03); }
+  100% { box-shadow: 0 0 10px rgba(239,68,68,0.42), 0 0 28px rgba(239,68,68,0.18); transform: scale(1); }
+}
+
+.mic-btn.recording { animation: micPulse 1.6s ease-in-out infinite; transform-origin: center; }
+.js-hidden { display: none; }
+
+@keyframes dot-pulse {
+  0% { transform: scale(0.88); opacity: 1; }
+  35% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+@media (max-width: 420px) {
+  .ai-line { stroke-width: 3; stroke-dasharray: 1200; }
+}
+

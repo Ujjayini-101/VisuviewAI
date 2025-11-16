@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VisuViewAI — Embedded Timeseries</title>
+
+  <!-- Keep your Tailwind build + icons -->
+  <link href="./css/output.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- OPTIONAL: keep Firebase & auth if parent-level login is required -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <!-- if you want parent auth behavior keep auth.js, otherwise remove it -->
+  <script src="./js/auth.js" defer></script>
+
+  <style>
+    /* make iframe fill remaining viewport under header (header is ~64px) */
+    :root { --header-h: 64px; }
+    html, body { height: 100%; margin: 0; }
+    /* ensure no horizontal scroll */
+    body { overflow-x: hidden; }
+
+    /* iframe container — full height below header */
+    #iframe-wrap {
+      height: calc(100vh - var(--header-h));
+      width: 100%;
+      background: #000;
+    }
+
+    #timeseries-iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
+      background: transparent;
+    }
+
+    /* keep the navbar z-index so it stays above iframe if desired */
+    header { z-index: 9999; position: sticky; top: 0; }
+  </style>
+</head>
+
+<body class="m-0 overflow-x-hidden min-h-screen text-neutral-100 bg-neutral-950">
+  <!-- ===== KEEP your existing header/navbar exactly as you provided ===== -->
+  <header class="sticky top-0 z-50 border-b border-red-600/50 bg-black/60 backdrop-blur-md">
+    <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
+      <div class="flex items-center gap-3">
+        <button id="mobileMenuBtn"
+                class="md:hidden p-2 rounded-md bg-neutral-900/50 ring-1 ring-red-700/30 hover:bg-neutral-900/60 focus:outline-none"
+                aria-label="Open menu">
+          <svg class="w-5 h-5 text-red-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M3 12h18M3 18h18"></path>
+          </svg>
+        </button>
+
+       <img src="./assets/logo.png" alt="VisuViewAI Logo"
+        class="h-10 w-10 object-contain drop-shadow-[0_0_14px_rgba(239,68,68,0.45)]">
+       <span class="font-semibold tracking-wide text-red-400 text-xl md:text-2xl">VisuViewAI</span>
+
+      </div>
+
+      <nav class="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-10">
+        <a href="index.html"
+           class="rounded-lg border border-red-600/30 bg-black/40 px-4 py-2 text-base text-neutral-300 hover:text-red-300 transition">Home</a>
+        <a href="compare.html"
+           class="rounded-lg border border-red-600/30 bg-black/40 px-4 py-2 text-base text-neutral-300 hover:text-red-300 transition">Compare Image</a>
+        <a href="chats.html"
+           class="rounded-lg border border-red-600/30 bg-black/40 px-4 py-2 text-base text-neutral-300 hover:text-red-300 transition">AI Assistant</a>
+      </nav>
+
+      <div class="flex items-center gap-2">
+        <button id="authToggleBtn" type="button"
+          class="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium shadow-[0_0_8px_rgba(239,68,68,.45)] hover:bg-red-500 transition
+               md:rounded-lg md:px-5 md:py-2 md:text-base md:shadow-[0_0_12px_rgba(239,68,68,.45)]">Login / Sign Up</button>
+
+        <button id="mobileNavToggle"
+                class="md:hidden inline-flex items-center justify-center p-2 rounded-md bg-neutral-900/50 ring-1 ring-red-700/30 hover:bg-neutral-900/60 focus:outline-none"
+                aria-expanded="false" aria-controls="mobileNavMenu" aria-label="Open navigation menu">
+          <svg class="w-4 h-4 text-red-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Mobile dropdown (kept if you still want mobile nav) -->
+      <div id="mobileNavMenu"
+           class="md:hidden absolute right-4 top-full mt-2 min-w-[180px] rounded-lg border border-red-600/30 bg-black/60 backdrop-blur-md shadow-[0_6px_30px_-10px_rgba(0,0,0,.6)] overflow-hidden scale-y-0 origin-top-right transition-transform duration-150"
+           style="transform-origin: top right;">
+        <nav class="flex flex-col">
+          <a href="index.html" class="block px-4 py-3 text-lg text-neutral-300 hover:bg-neutral-900/40 hover:text-red-300 border-b border-red-600/20">Home</a>
+          <a href="compare.html" class="block px-4 py-3 text-lg text-neutral-300 hover:bg-neutral-900/40 hover:text-red-300 border-b border-red-600/20">Compare Image</a>
+          <a href="chats.html" class="block px-4 py-3 text-lg text-neutral-300 hover:bg-neutral-900/40 hover:text-red-300">AI Assistant</a>
+        </nav>
+      </div>
+
+    </div>
+  </header>
+  <!-- ===== end header ===== -->
+
+  <!-- ===== App switcher (under the navbar) ===== -->
+  <div id="embed-controls" class="mx-auto max-w-7xl px-4 py-3 flex items-center gap-3 bg-transparent">
+    <div class="flex gap-2">
+      <button id="btnTimeseries" class="px-3 py-1 rounded-md bg-neutral-900/70 ring-1 ring-red-600/40 text-white font-medium">Upload & Compare</button>
+      <button id="btnCompare" class="px-3 py-1 rounded-md bg-neutral-900/40 ring-1 ring-red-600/30 text-neutral-300">Upload & Compare</button>
+    </div>
+
+    <div class="ml-auto flex items-center gap-3">
+      <div id="embedStatus" class="text-sm text-neutral-300">Ready</div>
+      <a id="openNewTab" href="#" target="_blank" rel="noopener" style="display:none;">Open in new tab</a>
+    </div>
+  </div>
+
+  <!-- ===== Single iframe: the selected app will load here ===== -->
+  <div id="iframe-wrap">
+    <iframe id="app-iframe"
+            src=""
+            title="VisuViewAI — Embedded App"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-modals"
+            allow="clipboard-read clipboard-write">
+    </iframe>
+  </div>
+
+  <!-- ===== Minimal JS wiring: switch apps, lazy load, status, fallback ===== -->
+  <script>
+  (function(){
+    // ---------- EDIT THESE TO MATCH YOUR ENV ----------
+    const TIMESERIES_URL = "http://localhost:8501";   // Streamlit timeseries app
+    const COMPARE_URL    = "http://localhost:3000";   // Upload & Compare portal (replace with exact URL)
+    // -------------------------------------------------
+
+    const iframe = document.getElementById('app-iframe');
+    const btnT = document.getElementById('btnTimeseries');
+    const btnC = document.getElementById('btnCompare');
+    const status = document.getElementById('embedStatus');
+    const openNewTab = document.getElementById('openNewTab');
+
+    function dbg(...args){ console.log('[EMBED]', ...args); }
+    function err(...args){ console.warn('[EMBED]', ...args); }
+
+    function setActive(btn){
+      btnT.classList.remove('bg-neutral-900/70','text-white'); btnT.classList.add('bg-neutral-900/40','text-neutral-300');
+      btnC.classList.remove('bg-neutral-900/70','text-white'); btnC.classList.add('bg-neutral-900/40','text-neutral-300');
+      btn.classList.remove('bg-neutral-900/40','text-neutral-300'); btn.classList.add('bg-neutral-900/70','text-white');
+    }
+
+    function loadApp(url, name){
+      if (!url) { status.textContent = 'No URL configured'; return; }
+      dbg('Loading', name, url);
+      status.textContent = `Loading ${name}…`;
+      openNewTab.style.display = 'inline';
+      openNewTab.href = url;
+      openNewTab.textContent = `Open ${name} in new tab`;
+
+      // If already loaded, keep it
+      if (iframe.src === url){
+        status.textContent = `${name} — loaded`;
+        return;
+      }
+
+      let loaded = false;
+      function onLoadOnce(){
+        loaded = true;
+        status.textContent = `${name} — loaded`;
+        dbg(`${name} iframe fired load`);
+        iframe.removeEventListener('load', onLoadOnce);
+      }
+      iframe.addEventListener('load', onLoadOnce);
+
+      // timeout to detect likely header/CSP blocking
+      const TIMEOUT = 2500;
+      setTimeout(() => {
+        if (!loaded){
+          err('Iframe load timeout — may be blocked by X-Frame-Options/CSP for', url);
+          status.textContent = `${name} blocked in iframe — use "Open in new tab"`;
+          openNewTab.style.display = 'inline';
+        }
+      }, TIMEOUT);
+
+      // load
+      iframe.src = 'about:blank';
+      setTimeout(()=> { iframe.src = url; }, 60);
+
+      // remember user choice
+      try { localStorage.setItem('visu_embed_last', url); } catch(e){}
+    }
+
+    // attach button handlers
+    btnT.addEventListener('click', function(){ setActive(btnT); loadApp(TIMESERIES_URL, 'Timeseries'); });
+    btnC.addEventListener('click', function(){ setActive(btnC); loadApp(COMPARE_URL, 'Upload & Compare'); });
+
+    // restore last or default to Timeseries
+    const last = (function(){ try { return localStorage.getItem('visu_embed_last'); } catch(e){ return null;} })();
+    if (last === COMPARE_URL){ setActive(btnC); loadApp(COMPARE_URL, 'Upload & Compare'); }
+    else { setActive(btnT); loadApp(TIMESERIES_URL, 'Timeseries'); }
+
+    dbg('Embed controller initialized', { TIMESERIES_URL, COMPARE_URL });
+
+    // optional: respond to keyboard T/C
+    window.addEventListener('keydown', (ev) => {
+      if (ev.target && (ev.target.tagName === 'INPUT' || ev.target.tagName === 'TEXTAREA' || ev.target.isContentEditable)) return;
+      if (ev.key.toLowerCase() === 't') btnT.click();
+      if (ev.key.toLowerCase() === 'c') btnC.click();
+    });
+
+    // minimal mobile nav toggle (keep your original if needed)
+    document.getElementById('mobileNavToggle').addEventListener('click', function(){
+      const menu = document.getElementById('mobileNavMenu');
+      const expanded = this.getAttribute('aria-expanded') === 'true';
+      this.setAttribute('aria-expanded', String(!expanded));
+      if (!expanded){ menu.style.transform = 'scaleY(1)'; menu.style.opacity = '1'; }
+      else { menu.style.transform = 'scaleY(0)'; menu.style.opacity = '0'; }
+    });
+
+    // dynamic header height -> iframe wrapper height adjustment
+    function resizeIframeWrapper(){
+      const headerH = document.querySelector('header').offsetHeight || 64;
+      document.documentElement.style.setProperty('--header-h', headerH + 'px');
+      document.getElementById('iframe-wrap').style.height = `calc(100vh - ${headerH}px)`;
+    }
+    window.addEventListener('load', resizeIframeWrapper);
+    window.addEventListener('resize', resizeIframeWrapper);
+    resizeIframeWrapper();
+
+  })();
+  </script>
+
+</body>
+</html>

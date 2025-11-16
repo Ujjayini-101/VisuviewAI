@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VisuViewAI - Visual Difference Engine</title>
+  
+  <link href="./css/output.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="./js/auth.js" defer></script>
+  <script type="module" src="./js/main.js" defer></script>
+  
+   <!-- add to <head> or before your main frontend JS -->
+
+  <style>
+
+    /* ---------- Existing styles ---------- */
+    .scroll-slim::-webkit-scrollbar { width: 10px; height: 10px; }
+    .scroll-slim::-webkit-scrollbar-thumb {
+      background: rgba(239, 68, 68, .25);
+      border-radius: 9999px;
+      border: 2px solid rgba(17, 17, 17, .8);
+    }
+    .scroll-slim::-webkit-scrollbar-track { background: transparent; }
+
+    .hero-glow {
+      background: radial-gradient(circle at 10% 10%, rgba(239, 68, 68, .06), transparent 20%),
+                  radial-gradient(circle at 90% 90%, rgba(239, 68, 68, .03), transparent 20%);
+    }
+    .site-max { max-width: 1200px; }
+
+    /* Section animation helper */
+    .section-animate .anim-child {
+      opacity: 0;
+      transition: all 0.7s ease-out;
+    }
+    .anim-slide-down { transform: translateY(-30px); }
+    .anim-slide-left { transform: translateX(-50px); }
+    .anim-slide-right { transform: translateX(50px); }
+    .is-visible .anim-child { opacity: 1; transform: translate(0, 0); }
+
+    /* Orbs background (unchanged) */
+    #traffic-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: visible; transition: opacity .22s linear; }
+    :root { --orb-move-duration: 13000ms; --orb-ease: cubic-bezier(.22,.9,.36,1); --orb-visual-duration: 520ms; }
+    .orb { position:absolute; border-radius:9999px; filter:blur(72px); opacity:.95; mix-blend-mode:screen; will-change:left,top,transform,filter,opacity; transform-origin:center; transition: left var(--orb-move-duration) var(--orb-ease), top var(--orb-move-duration) var(--orb-ease), transform var(--orb-visual-duration) cubic-bezier(.2,.95,.28,1), filter var(--orb-visual-duration) linear, opacity var(--orb-visual-duration) linear; pointer-events:none; display:block; }
+    .orb-red { background: radial-gradient(circle at 30% 30%, rgba(239,68,68,0.95) 0%, rgba(239,68,68,0.5) 35%, rgba(239,68,68,0.12) 60%, transparent 80%); width:58vmin; height:58vmin; left:34%; top:48%; transform:translate(-50%,-50%); }
+    .orb-green { background: radial-gradient(circle at 40% 40%, rgba(34,197,94,0.95) 0%, rgba(34,197,94,0.45) 35%, rgba(34,197,94,0.10) 60%, transparent 80%); width:50vmin; height:50vmin; left:50%; top:38%; transform:translate(-50%,-50%); }
+    .orb-yellow { background: radial-gradient(circle at 30% 30%, rgba(245,158,11,0.95) 0%, rgba(245,158,11,0.45) 35%, rgba(245,158,11,0.12) 60%, transparent 80%); width:54vmin; height:54vmin; left:66%; top:52%; transform:translate(-50%,-50%); }
+
+    @media (max-width: 640px) {
+      .orb { filter:blur(56px); --orb-move-duration:12000ms; }
+      .orb-red { width:70vmin; height:70vmin; left:48%; top:46%; }
+      .orb-green { width:64vmin; height:64vmin; left:38%; top:36%; }
+      .orb-yellow { width:66vmin; height:66vmin; left:62%; top:58%; }
+    }
+
+    @media (prefers-reduced-motion: reduce) { .orb { transition:none !important; animation:none !important; } }
+
+    main { position:relative; z-index:10; }
+    header { position:relative; z-index:50; }
+    footer { position:relative; z-index:10; }
+
+    /* ======= Headlight overlays (fully transparent gradients; NO opaque box) ======= */
+    .hero-image-wrapper { background: transparent; overflow: visible; position: relative; }
+
+    .headlight {
+      position: absolute;
+      pointer-events: none;
+      z-index: 13;             /* above image */
+      transform: translate(-50%,-50%);
+      opacity: 0;
+      will-change: transform, opacity;
+      background: transparent; /* crucial: no background color */
+      mix-blend-mode: screen;   /* blend staged gradients into page */
+      isolation: isolate;      /* keep blending local to overlay */
+    }
+
+    /* layers are all gradients (no solid backgrounds) */
+    .headlight .core {
+      position: absolute;
+      inset: 8% 12%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, rgba(255,255,255,1) 0%, rgba(255,255,255,0.86) 16%, rgba(255,255,255,0.4) 34%, rgba(255,255,255,0) 56%);
+      filter: blur(4px);
+      transform: scale(0.96);
+      opacity: 0;
+    }
+    .headlight .halo {
+      position: absolute;
+      inset: -26% -26%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 40%, rgba(200,230,255,0.95) 0%, rgba(160,200,255,0.26) 18%, rgba(120,160,255,0.08) 34%, rgba(90,130,255,0.02) 46%, transparent 74%);
+      filter: blur(20px);
+      opacity: 0;
+      transform: scale(0.98);
+    }
+    .headlight .rim {
+      position: absolute;
+      inset: -12% -12%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 45% 40%, rgba(255,190,190,0.18) 0%, rgba(255,120,130,0.10) 28%, rgba(255,80,100,0.04) 54%, transparent 82%);
+      filter: blur(12px);
+      opacity: 0;
+      transform: scale(0.98);
+    }
+    .headlight .streak {
+      position: absolute;
+      left: -220%;
+      right: -220%;
+      top: 48%;
+      height: 2px;
+      background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.95) 35%, rgba(255,255,255,0.85) 50%, rgba(255,255,255,0.2) 65%, rgba(255,255,255,0) 100%);
+      filter: blur(1px);
+      transform: translateY(-50%) scaleX(0.12);
+      opacity: 0;
+      mix-blend-mode: screen;
+      pointer-events: none;
+    }
+    .headlight .star {
+      position: absolute;
+      inset: 6% 20%;
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0;
+      background: conic-gradient(from 0deg, rgba(255,255,255,0.0) 0deg, rgba(255,255,255,0.85) 2deg, rgba(255,255,255,0.0) 6deg);
+      filter: blur(2px);
+      transform-origin: center center;
+    }
+
+  
+/* === AI Assistant arrow + staging animations (updated) ===
+   Dot -> draw L-shaped line (vertical then horizontal) -> reveal right text */
+.ai-arrow-wrap { position: relative; width: 100%; height: 100%; pointer-events: none; }
+
+.ai-arrow-svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; }
+
+/* dot style (fade + scale) */
+.ai-dot {
+  fill: #b91c1c; /* darker red for contrast */
+  stroke: rgba(90,10,10,0.95);
+  stroke-width: 0.9;
+  transform-origin: center;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 260ms ease, transform 260ms cubic-bezier(.2,.9,.2,1);
+}
+
+/* line style: darker + bolder, prepared for dash-draw animation */
+.ai-line {
+  stroke: #7f1d1d;         /* darker red (bolder visual) */
+  stroke-width: 4;         /* thicker for visibility */
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  stroke-dasharray: 2000;  /* large enough for any L path */
+  stroke-dashoffset: 2000;
+  opacity: 0;
+}
+
+/* when animating, draw the line */
+.ai-line.draw {
+  opacity: 1;
+  animation: line-draw 720ms cubic-bezier(.2,.9,.2,1) forwards;
+  animation-delay: 220ms;
+}
+
+/* dot visible state */
+.ai-dot.show { opacity: 1; transform: scale(1); transition-delay: 60ms; }
+
+/* dot pulse during draw */
+@keyframes dot-pulse {
+  0% { transform: scale(0.88); opacity: 1; }
+  35%{ transform: scale(1.04); }
+  100%{ transform: scale(1); }
+}
+
+/* text reveal: slide from right and slightly upward (start lower, then up) */
+.ai-text-reveal { opacity: 0; transform: translateX(28px) translateY(12px); transition: transform 520ms cubic-bezier(.15,.9,.25,1), opacity 420ms ease; }
+.ai-text-reveal.show { opacity: 1; transform: translateX(0) translateY(-12px); transition-delay: 920ms; }
+
+/* draw animation uses dashoffset to reveal stroke */
+@keyframes line-draw {
+  0%   { stroke-dashoffset: 2000; opacity: 1; }
+  80%  { stroke-dashoffset: 24; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+/* responsive fallback smaller stroke on very small screens */
+@media (max-width: 420px) {
+  .ai-line { stroke-width: 3; stroke-dasharray: 1200; }
+  .ai-dot { r: 5; }
+}
+
+/* active animations (fade + spread) */
+    .headlight-active { opacity: 1 !important; }
+    .headlight-active .core  { animation: hv_core 520ms cubic-bezier(.12,.8,.2,1) 0s 1 forwards; }
+    .headlight-active .halo  { animation: hv_halo 720ms cubic-bezier(.2,.9,.2,1) 0s 1 forwards; }
+    .headlight-active .rim   { animation: hv_rim 760ms cubic-bezier(.2,.9,.2,1) 0s 1 forwards; }
+    .headlight-active .streak{ animation: hv_streak 560ms cubic-bezier(.3,.85,.2,1) 40ms 1 forwards; }
+    .headlight-active .star  { animation: hv_star 600ms cubic-bezier(.25,.85,.25,1) 20ms 1 forwards; }
+
+    @keyframes hv_core {
+      0% { opacity: 0; transform: scale(0.8); filter: blur(12px); }
+      25% { opacity: 1; transform: scale(1.12); filter: blur(3px); }
+      60% { opacity: 0.9; transform: scale(1.18); filter: blur(6px); }
+      100% { opacity: 0; transform: scale(1.34); filter: blur(20px); }
+    }
+    @keyframes hv_halo {
+      0% { opacity: 0; transform: scale(0.92); filter: blur(30px); }
+      45% { opacity: 0.98; transform: scale(1.14); filter: blur(12px); }
+      100% { opacity: 0; transform: scale(1.28); filter: blur(36px); }
+    }
+    @keyframes hv_rim {
+      0% { opacity: 0; transform: scale(0.9); filter: blur(24px); }
+      55% { opacity: 0.9; transform: scale(1.08); filter: blur(10px); }
+      100% { opacity: 0; transform: scale(1.22); filter: blur(28px); }
+    }
+    @keyframes hv_streak {
+      0% { opacity: 0; transform: translateY(-50%) scaleX(0.06); filter: blur(0.5px); }
+      30% { opacity: 1; transform: translateY(-50%) scaleX(1.0); filter: blur(0.6px); }
+      100% { opacity: 0; transform: translateY(-50%) scaleX(1.2); filter: blur(1.6px); }
+    }
+    @keyframes hv_star {
+      0% { opacity: 0; transform: rotate(10deg) scale(0.7); filter: blur(3px); }
+      30% { opacity: 0.95; transform: rotate(0deg) scale(1.04); filter: blur(0.5px); }
+      100% { opacity: 0; transform: rotate(-8deg) scale(1.24); filter: blur(6px); }
+    }
+
+    /* hide image until flash releases (keeps slide-in ordering) */
+    .await-flash { opacity: 0 !important; transform: translateX(60px) !important; transition: none !important; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .headlight, .headlight * { animation: none !important; transition: none !important; opacity: 0 !important; }
+      .await-flash { opacity: 1 !important; transform: none !important; transition: none !important; }
+    }
+
+    @media (max-width: 640px) {
+      .headlight .halo { filter: blur(12px); inset: -18% -18%; }
+      .headlight .core { filter: blur(4px); inset: 10% 14%; }
+      .headlight .rim { filter: blur(6px); inset: -8% -8%; }
+      .headlight .streak { height: 1px; left: -120%; right: -120%; }
+    }
+
+    /* Small helper to hide default cursor when we add class; your existing JS toggles this */
+    .cursor-none { cursor: none !important; }
+  </style>
+</head>
+
+<body class="min-h-screen text-neutral-100 bg-neutral-950 [background:radial-gradient(60rem_60rem_at_70%_0%,rgba(239,68,68,.06),transparent_60%),radial-gradient(40rem_40rem_at_0%_30%,rgba(239,68,68,.04),transparent_55%),linear-gradient(to_bottom,#0a0a0a,#000)] scroll-slim">
+
+<!-- REPLACE YOUR OLD #gameCursor BLOCK WITH THIS -->
+<div id="gameCursor" aria-hidden="true"
+     class="fixed pointer-events-none z-[9999] opacity-0 -translate-x-1/2 -translate-y-1/2 will-change-transform"
+     style="left:50%;top:50%;" data-size="64">
+  <!-- glow -->
+  <div class="absolute inset-[-26%] rounded-full mix-blend-screen"
+       style="background:radial-gradient(circle at 40% 35%, rgba(255,120,120,0.32), rgba(200,230,255,0.04) 36%, rgba(0,0,0,0) 72%); filter: blur(14px); pointer-events: none;"></div>
+
+  <!-- Detailed 3D SVG arrow (smaller + tapered end) -->
+  <svg viewBox="0 0 120 162"
+       class="block w-[64px] h-[88px] md:w-[76px] md:h-[104px] drop-shadow-[0_18px_32px_rgba(0,0,0,0.6)]"
+       style="transform-origin:50% 85%; pointer-events:none; display:block;"
+       xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+    <defs>
+      <linearGradient id="mGrad" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="#ff4a4a"/>
+        <stop offset="55%" stop-color="#d11b1b"/>
+        <stop offset="100%" stop-color="#7b0a0a"/>
+      </linearGradient>
+      <linearGradient id="specA" x1="0" x2="1" y1="0" y2="0">
+        <stop offset="0%" stop-color="rgba(255,255,255,0.92)"/>
+        <stop offset="30%" stop-color="rgba(255,255,255,0.28)"/>
+        <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+      </linearGradient>
+      <linearGradient id="rimL" x1="0" x2="1" y1="0" y2="1">
+        <stop offset="0%" stop-color="rgba(255,180,180,0.65)"/>
+        <stop offset="100%" stop-color="rgba(255,80,80,0.05)"/>
+      </linearGradient>
+      <linearGradient id="crease" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="#9a0606"/>
+        <stop offset="100%" stop-color="#4e0202"/>
+      </linearGradient>
+
+      <!-- inner shadow -->
+      <filter id="innerShadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="3" result="blur"/>
+        <feOffset dx="0" dy="3" result="off"/>
+        <feComposite in="off" in2="SourceGraphic" operator="arithmetic" k2="-1" k3="1" result="comp"/>
+        <feColorMatrix type="matrix" values="0 0 0 0 0
+                                              0 0 0 0 0
+                                              0 0 0 0 0
+                                              0 0 0 .38 0" />
+      </filter>
+
+      <!-- outer shadow -->
+      <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000" flood-opacity="0.36"/>
+      </filter>
+    </defs>
+
+    <g filter="url(#softShadow)">
+      <!-- head / top -->
+      <polygon points="60,4 20,56 60,70" fill="url(#mGrad)"/>
+      <polygon points="60,4 100,56 60,70" fill="url(#mGrad)"/>
+
+      <!-- fold / crease -->
+      <polygon points="60,10 44,44 60,66 76,44" fill="url(#crease)" opacity="0.98"/>
+
+      <!-- rim + spec -->
+      <polygon points="60,6 30,56 60,66" fill="url(#rimL)" opacity="0.28"/>
+      <polygon points="60,6 90,56 60,66" fill="url(#specA)" opacity="0.18"/>
+
+      <!-- sharp tip highlight -->
+      <path d="M60 8 L66 24 L60 22 L54 24 Z" fill="rgba(255,255,255,0.10)"/>
+
+      <!-- small bevel line -->
+      <path d="M60 10 L48 40 L60 64" stroke="rgba(0,0,0,0.28)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+
+      <!-- connector / neck -->
+      <polygon points="52,68 68,68 64,86 56,86" fill="#8c0c0c" />
+
+      <!-- tapered shaft (narrower toward the end) -->
+      <!-- Shaft polygon coordinates adjusted to be thinner and centered -->
+      <g transform="">
+        <polygon points="36,86 84,86 74,136 46,136"
+                 fill="url(#mGrad)"/>
+        <!-- top bevel -->
+        <polygon points="36,86 84,86 66,100 54,100"
+                 fill="#a11212" opacity="0.95"/>
+        <!-- inner plate -->
+        <polygon points="44,94 76,94 70,128 50,128"
+                 fill="rgba(0,0,0,0.05)"/>
+        <!-- reflective streak -->
+        <path d="M46 98 L74 98 L66 104 L54 104 Z" fill="rgba(255,255,255,0.06)"/>
+        <!-- small rivet -->
+        <circle cx="60" cy="112" r="1.8" fill="rgba(255,255,255,0.12)"/>
+      </g>
+
+      <!-- faint inner shadow overlay to glue facets -->
+      <rect x="14" y="16" width="92" height="126" rx="5" fill="transparent" filter="url(#innerShadow)"/>
+    </g>
+
+    <!-- subtle outline -->
+    <path d="M60 4 L100 56 L64 56 L64 86 L56 86 L56 56 L20 56 Z"
+          fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="0.8" stroke-linejoin="round" />
+  </svg>
+</div>
+
+  <!-- Animated orbs -->
+  <div id="traffic-bg" aria-hidden="true">
+    <div class="orb orb-red" id="orb-red" data-base-left="34" data-base-top="48" aria-hidden="true"></div>
+    <div class="orb orb-green" id="orb-green" data-base-left="50" data-base-top="38" aria-hidden="true"></div>
+    <div class="orb orb-yellow" id="orb-yellow" data-base-left="66" data-base-top="52" aria-hidden="true"></div>
+  </div>
+
+  <header class="sticky top-0 z-50 border-b border-red-600/50 bg-black/60 backdrop-blur-md">
+    <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
+      <div class="flex items-center gap-3">
+
+        <img src="./assets/logo.png" alt="VisuViewAI Logo" class="h-10 w-10 object-contain drop-shadow-[0_0_14px_rgba(239,68,68,0.45)]">
+        <span class="font-semibold tracking-wide text-red-400 text-xl md:text-2xl">VisuViewAI</span>
+      </div>
+
+      <nav class="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-10">
+      <a href="index.html" data-page="home"
+        class="nav-link rounded-lg border border-red-600/30 bg-black/40 px-4 py-2 text-base text-neutral-300 hover:text-red-300 transition">Home</a>
+      <a href="compare.html" data-page="compare"
+        class="nav-link rounded-lg border border-red-600/30 bg-black/40 px-4 py-2 text-base text-neutral-300 hover:text-red-300 transition">Compare Image</a>
+      <a href="chats.html" data-page="assistant"
+        class="nav-link rounded-lg border border-red-600/30 bg-black/40 px-4 py-2 text-base text-neutral-300 hover:text-red-300 transition">AI Assistant</a>
+    </nav>
+
+      <div class="flex items-center gap-2">
+        <button id="authToggleBtn" type="button" class="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium shadow-[0_0_8px_rgba(239,68,68,.45)] hover:bg-red-500 transition
+           md:rounded-lg md:px-5 md:py-2 md:text-base md:shadow-[0_0_12px_rgba(239,68,68,.45)]">Login / Sign Up</button>
+
+        <button id="mobileNavToggle" class="md:hidden inline-flex items-center justify-center p-2 rounded-md bg-neutral-900/50 ring-1 ring-red-700/30 hover:bg-neutral-900/60 focus:outline-none" aria-expanded="false" aria-controls="mobileNavMenu" aria-label="Open navigation menu">
+          <svg class="w-4 h-4 text-red-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div id="mobileNavMenu" class="md:hidden absolute right-4 top-full mt-2 min-w-[180px] rounded-lg border border-red-600/30 bg-black/60 backdrop-blur-md shadow-[0_6px_30px_-10px_rgba(0,0,0,.6)] overflow-hidden scale-y-0 origin-top-right transition-transform duration-150" style="transform-origin: top right;">
+        <nav class="flex flex-col">
+        <a href="index.html" data-page="home"
+          class="nav-link block px-4 py-3 text-lg text-neutral-300 hover:bg-neutral-900/40 hover:text-red-300 border-b border-red-600/20">Home</a>
+        <a href="compare.html" data-page="compare"
+          class="nav-link block px-4 py-3 text-lg text-neutral-300 hover:bg-neutral-900/40 hover:text-red-300 border-b border-red-600/20">Compare Image</a>
+        <a href="chats.html" data-page="assistant"
+          class="nav-link block px-4 py-3 text-lg text-neutral-300 hover:bg-neutral-900/40 hover:text-red-300">AI Assistant</a>
+      </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="overflow-x-hidden">
+    <!-- HERO -->
+    <section id="hero" class="section-animate relative grid min-h-[70vh] md:min-h-[80vh] items-center site-max mx-auto px-4 py-16 hero-glow">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        <div class="space-y-4 -ml-5">
+          <h1 class="anim-child anim-slide-down split-text overflow-visible pb-2 leading-[1.05] text-4xl md:text-5xl font-bold text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.3)]"
+    data-split="chars"
+    data-delay="60"
+    data-duration="700"
+    data-ease="cubic-bezier(0.22,1,0.36,1)"
+    data-from-y="40"
+    data-from-opacity="0"
+    data-to-y="0"
+    data-to-opacity="1"
+    data-threshold="0.12"
+    data-root-margin="-100px"
+    data-once="true"
+>
+  Visual Difference Engine
+</h1>
+
+          <p class="ml-8 anim-child anim-slide-down text-lg md:text-xl text-neutral-300" style="transition-delay: 150ms;">
+           <b> Your AI Engine for Visual Understanding.</b> <br><br> <span style="color: rgb(253, 198, 176);"> <i>VisuView AI</i></span>
+             helps you <span style="color: rgb(142, 255, 101);"> instantly </span> spot, understand, and act on visual changes
+             explaining every detail to help you make faster, smarter, and more <span style="color: rgb(241, 241, 71);"> confident </span>decisions.
+          </p>
+          <br>
+          <!-- Hero Button -->
+         <div class="mt-6 ml-12">
+                <button id="heroActionBtn"
+                class="hero-btn bg-red-600 text-white font-semibold px-8 py-3 rounded-full text-lg shadow-lg hover:bg-red-700 hover:scale-[1.05] transition-all duration-300 focus:outline-none">
+                Get Started →
+         </button>
+         </div>
+
+        </div>
+
+        <div class="relative flex justify-center items-center hero-image-wrapper" style="min-height:220px;">
+          <!-- HEADLIGHT OVERLAYS (transparent gradients only; no dimmer) -->
+          <div class="headlight headlight-left" aria-hidden="true">
+            <div class="halo"></div>
+            <div class="rim"></div>
+            <div class="core"></div>
+            <div class="streak"></div>
+            <div class="star"></div>
+          </div>
+
+          <div class="headlight headlight-right" aria-hidden="true">
+            <div class="halo"></div>
+            <div class="rim"></div>
+            <div class="core"></div>
+            <div class="streak"></div>
+            <div class="star"></div>
+          </div>
+
+          <!-- hero image: await-flash blocks slide-in until flash completes -->
+          <img id="heroImg"
+               src="./assets/hero-car.png"
+               alt="Red Sports Car"
+               class="anim-child anim-slide-right w-full max-w-lg await-flash"
+               style="transition-delay: 400ms;"
+               data-headlight-left-x="0.22"
+               data-headlight-right-x="0.78"
+               data-headlight-y="0.44"
+               data-headlight-scale="0.34"
+               data-headlight-offset-y="0.26" />
+        </div>
+      </div>
+    </section>
+
+    <!-- other sections unchanged -->
+    <section class="section-animate site-max mx-auto px-4 py-16 md:py-24">
+     <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+      <!-- BEFORE / AFTER IMAGE PORTAL 1 (enhanced sizing) -->
+      <!-- Image portal: place AFTER the text on mobile (order-2) and BACK to left on md+ (md:order-1) -->
+    <div class="before-after-portal order-2 md:order-1 w-full max-w-md mx-auto md:max-w-3xl lg:max-w-[880px]">
+    <!-- give the portal a fixed mobile height (taller feel), and auto height on md+ -->
+    <div class="ba-wrap relative rounded-2xl overflow-hidden shadow-[0_0_30px_-10px_rgba(239,68,68,0.45)] h-[420px] md:h-auto">
+
+    <!-- background (before) -->
+    <img class="ba-img ba-before block w-full h-full object-cover" 
+         src="./assets/compare-portal.png" 
+         alt="Before image (example)" />
+
+    <!-- foreground (after) -->
+    <div class="ba-after-wrap absolute inset-0 w-1/2 left-0 top-0 overflow-hidden">
+      <img class="ba-img ba-after block w-full h-full object-cover"
+           src="./assets/after.png"
+           alt="After image (example)" />
+    </div>
+
+    <!-- central divider + handle -->
+    <div class="ba-divider absolute top-0 bottom-0 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none">
+      <div class="ba-line absolute inset-y-0 w-[2px] bg-gradient-to-b from-white/90 to-white/10 shadow-[0_0_12px_rgba(0,0,0,0.6)] pointer-events-none"></div>
+
+      <button class="ba-handle relative z-20 w-10 h-10 rounded-full bg-white/95 shadow-lg flex items-center justify-center -translate-x-1/2"
+              aria-label="Drag to compare images"
+              title="Drag to compare images"
+              tabindex="0"
+              style="pointer-events:auto;">
+        <svg width="16" height="10" viewBox="0 0 16 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 5H15" stroke="#9b1b1b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M5 1L1 5L5 9" stroke="#9b1b1b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M11 1L15 5L11 9" stroke="#9b1b1b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- hidden range input -->
+    <input class="ba-range sr-only" type="range" min="0" max="100" value="50" aria-label="Compare before and after" />
+  </div>
+    </div>
+
+    <!-- Text + PNG: appear first on mobile (order-1) and on the right on md+ (md:order-2) -->
+    <div class="anim-child anim-slide-right space-y-3 order-1 md:order-2 -mt-10 md:mt-16" style="transition-delay: 150ms;">
+        <h2 id="true-focus-heading"
+          class="text-4xl ml-2 md:text-5xl font-bold text-red-500"
+          style="width:fit-content;">
+        </h2>
+      <p class="text-xl md:text-2xl pt-2 ml-2 text-neutral-300">
+        <b>Let <span style="color: rgb(248, 43, 43);"><i>VisuView AI</i></span> do the <span style="color: rgb(241, 241, 71);">perfect</span> work for you.</b>
+         <p class="text-xl md:text-2xl mt-4 ml-2 text-neutral-300">
+          Whether you’re <span style="color: rgb(248, 43, 43);">choosing</span> the best shot or inspecting object changes, 
+          it spots what your eyes might miss, <span style="color: rgb(248, 43, 43);">explains</span> why those <span style="color: rgb(57, 248, 43);">details</span> matter, 
+        and helps you <span style="color: rgb(241, 241, 71);">decide</span> with complete confidence.</p>
+      </p>
+      <br><br>
+        <div class="mt-8 ml-28 md:ml-24">
+          <img
+           src="./assets/start-stop-buttons.png"
+           alt="Analysis Output"
+           class="w-[220px] md:w-[340px] max-w-full rounded-lg"
+           />
+        </div>
+    </div>
+  </div>
+</section>
+
+
+    <section class="section-animate site-max mx-auto px-4 py-16 md:py-24">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        <div class="anim-child anim-slide-left space-y-3 -mt-10 md:mt-14">
+          <h2 id="true-focus-heading-2" class="text-3xl md:text-4xl font-bold text-red-500">
+          </h2>
+          <p class="text-xl md:text-2xl pt-3 text-neutral-300">
+             <b>Stay ahead with <i><span style="color: rgb(231, 231, 83);">Visual Intelligence</span>.</i></b>
+             <br><br>It compares <span style="color: rgb(137, 237, 94);">time-series</span> images to <span style="color: rgb(234, 106, 106);">detect</span> 
+             <i>structural shifts, component wear, damages, logo differences, and product variations</i> before they impact <span style="color: rgb(231, 231, 83);">performance</span> or <span style="color: rgb(231, 231, 83);">quality</span>.
+           </p>
+           <br>
+           <div class="pt-4 ml-32 md:ml-16">
+          <img
+           src="./assets/start_stop_button2.png"
+           alt="Analysis Output"
+           class="w-[220px] md:w-[320px] max-w-full rounded-lg"
+           />
+        </div>
+        </div>
+<!-- BEFORE / AFTER IMAGE PORTAL 2 (enhanced sizing) -->
+  <div class="before-after-portal w-full max-w-md mx-auto md:max-w-3xl lg:max-w-[880px]">
+  <div class="ba-wrap relative rounded-2xl overflow-hidden shadow-[0_0_30px_-10px_rgba(239,68,68,0.45)] h-[420px] md:h-auto">
+    <!-- background (before) -->
+    <img class="ba-img ba-before block w-full h-full object-cover" 
+         src="./assets/before1.png" 
+         alt="Before image (example)" />
+
+    <!-- foreground (after) -->
+    <div class="ba-after-wrap absolute inset-0 w-1/2 left-0 top-0 overflow-hidden">
+      <img class="ba-img ba-after block w-full h-full object-cover"
+           src="./assets/after1.png"
+           alt="After image (example)" />
+    </div>
+
+    <!-- central divider + handle -->
+    <div class="ba-divider absolute top-0 bottom-0 left-1/2 -translate-x-1/2 flex items-center justify-center pointer-events-none">
+      <div class="ba-line absolute inset-y-0 w-[2px] bg-gradient-to-b from-white/90 to-white/10 shadow-[0_0_12px_rgba(0,0,0,0.6)] pointer-events-none"></div>
+
+      <button class="ba-handle relative z-20 w-10 h-10 rounded-full bg-white/95 shadow-lg flex items-center justify-center -translate-x-1/2"
+              aria-label="Drag to compare images"
+              title="Drag to compare images"
+              tabindex="0"
+              style="pointer-events:auto;">
+        <svg width="16" height="10" viewBox="0 0 16 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1 5H15" stroke="#9b1b1b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M5 1L1 5L5 9" stroke="#9b1b1b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M11 1L15 5L11 9" stroke="#9b1b1b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
+      <!-- hidden range input -->
+      <input class="ba-range sr-only" type="range" min="0" max="100" value="50" aria-label="Compare before and after" />
+    </div>
+  </div>
+ </div>
+</section>
+
+ <section class="section-animate site-max mx-auto px-4 py-16 md:py-24 text-center">
+   <h2 class="anim-child anim-slide-down text-4xl md:text-4xl font-bold text-red-500 mb-12 md:mb-16">AI Assistant</h2>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-4 items-center text-left">
+    <!-- left column -->
+    <div id="aiLeftCol" class="anim-child anim-slide-left space-y-2 text-center md:text-right ai-text-reveal-left md:-mt-20-mt-4" style="transition-delay: 400ms;">
+    <h3 class="text-xl font-semibold text-neutral-100">Your 24/7 <i><span style="color: rgb(231, 231, 83);">conversation</span> companion</i>.</h3>
+    <p class="text-neutral-300" style="font-size: 17px;">Always here to <i>listen, guide, and explain </i>because <span style="color: rgb(137, 237, 94);">clarity</span> should happen as fast as <span style="color: rgb(231, 231, 83);">curiosity</span>.
+        In a world that moves fast, curiosity deserves faster <span style="color: rgb(241, 64, 64);">understanding.</span></p>
+    </div>
+
+    <!-- middle column: robot image + svg arrow overlay -->
+    <div class="anim-child flex justify-center" style="transition-delay: 200ms;">
+      <div class="ai-arrow-wrap w-full max-w-xs mx-auto" style="position:relative;">
+        <!-- the robot image remains unchanged -->
+        <img id="aiBotImg" src="./assets/bot.png" alt="AI Assistant Robot"
+             class="w-full max-w-xs mx-auto drop-shadow-[0_0_15px_rgba(239,68,68,0.25)]"
+             style="display:block; position:relative; z-index:1;">
+
+        <!-- SVG overlay - coordinates will be computed by JS -->
+        <svg id="aiArrowSvg" class="ai-arrow-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 400" preserveAspectRatio="xMinYMin meet" aria-hidden="true" style="z-index:2;">
+          <!-- circle: we'll set cx/cy/r by JS -->
+          <circle id="aiDot" class="ai-dot" cx="0" cy="0" r="10"></circle>
+
+          <!-- path: a smooth L-like path (JS will set 'd') -->
+          <path id="aiLine" class="ai-line" d="" stroke-linecap="round" stroke-linejoin="round"></path>
+
+          <!-- small arrowhead at final bend, optional -->
+          <polygon id="aiArrowHead" points="" fill="#ef4444" opacity="0"></polygon>
+        </svg>
+      </div>
+    </div>
+
+    <!-- right column: this content will animate slightly after the line appears -->
+    <div id="aiRightCol" class="anim-child anim-slide-right space-y-2 text-center md:text-left ai-text-reveal md:-mt-44 -mt-4"
+  style="transition-delay: 400ms;">
+      <h3 class="text-xl font-semibold text-neutral-200">Engage <i><span style="color: rgb(231, 231, 83);">Effortlessly</span></i>, Respond <i><span style="color: rgb(137, 237, 94);">Instantly</span>.</i></h3>
+      <p class="text-neutral-300" style="font-size: 17px;">Every conversation becomes a journey where the destination is always <span style="color: rgb(241, 64, 64);">perfection</span>.
+         From confusion to <span style="color: rgb(231, 231, 83);">clarity</span>, from questions to <span style="color: rgb(137, 237, 94);">confident insights</span>,
+         <span style="color: rgb(241, 64, 64);"><i>VisuView AI</i></span> guides you every step of the way.</p>
+    </div>
+  </div>
+
+</section>
+
+<!-- =========================
+     Desktop-only assistant explanatory paragraph (with typewriter)
+     ========================= -->
+<div id="aiAssistantText" class="hidden md:block site-max mx-auto px-4 mt-2 mb-12" aria-hidden="true">
+  <div
+    id="heroTyping"
+    class="text-type-wrapper text-center text-xl leading-relaxed"
+    data-text='["The AI Assistant makes understanding visual comparisons effortless through Natural & Human-like conversations. You can ask questions, get instant explanations, and uncover the meaning behind every detected change with complete confidence. Whenever confusion arises in your project, the assistant is always ready to respond instantly turning complex insights into clear, actionable understanding."]'
+    data-typing-speed="45"
+    data-initial-delay="200"
+    data-loop="false"
+    data-one-time="true"
+    data-show-cursor="true"
+    data-hide-cursor-while-typing="false"
+    data-cursor-char="|"
+    data-cursor-blink-duration="0.55"
+    data-start-on-visible="true"
+  ></div>
+</div>
+<!-- End new block -->
+
+
+    <section class="section-animate site-max mx-auto px-4 py-16 md:py-24">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        <div class="anim-child anim-slide-left space-y-3 -mt-8 md:-mt-32">
+          <h2 class="text-3xl md:text-4xl font-bold text-red-500">
+            <span class="blur-text-js"
+               data-animate-by="words"
+               data-delay="120"
+               data-step-duration="0.35"
+               data-direction="top"
+               data-threshold="0.1"
+               data-root-margin="-50px"
+               data-ease="cubic-bezier(0.22,1,0.36,1)"
+               data-once="true">
+            Analytical dashboard</h2>
+          <p class="text-xl text-neutral-300">Your command center for every <i><span style="color: rgb(241, 64, 64);">Visual Insight.</span></i></b>
+             <br><br><i>Track total comparisons, detected changes, generated reports, and recent activity</i>
+              see how your work evolves, where changes matter, and how every decision drives <span style="color: rgb(231, 231, 83);">improvement</span> over time.</p>
+        </div>
+        <div class="anim-child anim-slide-right" style="transition-delay: 150ms;">
+          <img src="./assets/analytics-dashboard.png" alt="Analytics Dashboard" class="rounded-lg shadow-glow-red w-full">
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+<!-- ===== Auth Waves Modal (hidden by default) ===== -->
+<div id="authOverlay" class="fixed inset-0 hidden bg-black/60 backdrop-blur-sm px-4 py-6" aria-hidden="true">
+  <div id="authOverlayInner" class="relative w-full max-w-5xl pointer-events-none">
+    <!-- Waves container (fills and intentionally overflows sides + bottom) -->
+       <div id="authWaves" aria-hidden="true" class="pointer-events-none">
+        <!-- big canvas — fills and intentionally overflows sides + bottom -->
+        <canvas id="authWavesCanvas" class="auth-wave auth-wave-canvas" aria-hidden="true"></canvas>
+        </div>
+
+
+    <!-- center card (pointer-events-auto to allow interaction) -->
+    <div id="authCard" class="mx-auto relative z-[100000] w-full max-w-sm md:max-w-md rounded-2xl bg-black/60 backdrop-blur-md border border-red-600/20 shadow-[0_20px_60px_-18px_rgba(0,0,0,0.8)] p-6 text-neutral-100 pointer-events-auto">
+      <!-- Close -->
+      <button id="authCloseBtn" aria-label="Close login" class="absolute right-3 top-3 text-neutral-200 hover:text-white z-50">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+
+      <!-- Tabs -->
+      <div class="flex items-center justify-center gap-3 mb-4">
+        <button id="tabSignUp" class="auth-tab px-4 py-2 rounded-full text-sm font-semibold bg-red-600 text-white shadow-[0_6px_20px_-10px_rgba(239,68,68,0.45)]">Sign Up</button>
+        <button id="tabLogin" class="auth-tab px-4 py-2 rounded-full text-sm font-semibold bg-white/10 text-white">Login</button>
+      </div>
+
+      <!-- Forms (unchanged) -->
+      <div id="authFormsWrap" class="w-full">
+        <!-- Sign Up Form -->
+        <form id="signUpForm" class="space-y-4">
+          <div class="text-center">
+            <h3 class="text-lg font-bold text-red-400">Create an account</h3>
+            <p class="text-sm text-neutral-300">Join VisuViewAI to save projects & history</p>
+          </div>
+          <div>
+            <label class="block text-xs text-neutral-300 mb-1">Full name</label>
+            <input required type="text" name="name" class="w-full rounded-lg bg-black/30 border border-red-600/20 px-3 py-2 text-neutral-100 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Your name">
+          </div>
+          <div>
+            <label class="block text-xs text-neutral-300 mb-1">E-mail address</label>
+            <input required type="email" name="email" class="w-full rounded-lg bg-black/30 border border-red-600/20 px-3 py-2 text-neutral-100 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="you@example.com">
+          </div>
+          <div>
+            <label class="block text-xs text-neutral-300 mb-1">Password</label>
+            <input required type="password" name="password" class="w-full rounded-lg bg-black/30 border border-red-600/20 px-3 py-2 text-neutral-100 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Create password">
+          </div>
+          <div class="pt-2">
+            <button type="submit" class="w-full rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold py-2 shadow-[0_10px_30px_-14px_rgba(239,68,68,0.5)]">Create account</button>
+          </div>
+          <div class="flex items-center gap-3 my-1">
+            <div class="flex-1 h-px bg-white/6"></div>
+            <div class="text-xs text-neutral-400">or</div>
+            <div class="flex-1 h-px bg-white/6"></div>
+          </div>
+          <div>
+            <button id="signUpGoogleBtn" type="button" class="w-full inline-flex items-center justify-center gap-3 rounded-lg bg-white text-neutral-900 font-semibold py-2 shadow-[0_8px_30px_-18px_rgba(0,0,0,0.6)]">
+              <i class="fa-brands fa-google text-lg"></i>
+              <span>Continue with Google</span>
+            </button>
+          </div>
+          <div class="text-center text-sm text-neutral-400">
+            <span>Already have an account? </span>
+            <button type="button" id="switchToLoginInline" class="text-white underline">Login</button>
+          </div>
+        </form>
+
+        <!-- Login Form -->
+        <form id="loginForm" class="space-y-4 hidden">
+          <div class="text-center">
+            <h3 class="text-lg font-bold text-red-400">Welcome back</h3>
+            <p class="text-sm text-neutral-300">Sign in to continue</p>
+          </div>
+          <div>
+            <label class="block text-xs text-neutral-300 mb-1">E-mail address</label>
+            <input required type="email" name="email" class="w-full rounded-lg bg-black/30 border border-red-600/20 px-3 py-2 text-neutral-100 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="you@example.com">
+          </div>
+          <div>
+            <label class="block text-xs text-neutral-300 mb-1">Password</label>
+            <input required type="password" name="password" class="w-full rounded-lg bg-black/30 border border-red-600/20 px-3 py-2 text-neutral-100 focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Your password">
+          </div>
+          <div class="flex items-center justify-between text-sm text-neutral-300">
+            <label class="flex items-center gap-2">
+              <input type="checkbox" class="form-checkbox text-red-500 rounded"> <span>Remember me</span>
+            </label>
+            <a href="#" class="text-white/80 hover:underline">Forgot password?</a>
+          </div>
+          <div class="pt-2">
+            <button type="submit" class="w-full rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold py-2 shadow-[0_10px_30px_-14px_rgba(239,68,68,0.5)]">Sign in</button>
+          </div>
+          <div class="flex items-center gap-3 my-1">
+            <div class="flex-1 h-px bg-white/6"></div>
+            <div class="text-xs text-neutral-400">or</div>
+            <div class="flex-1 h-px bg-white/6"></div>
+          </div>
+          <div>
+            <button id="loginGoogleBtn" type="button" class="w-full inline-flex items-center justify-center gap-3 rounded-lg bg-white text-neutral-900 font-semibold py-2 shadow-[0_8px_30px_-18px_rgba(0,0,0,0.6)]">
+              <i class="fa-brands fa-google text-lg"></i>
+              <span>Continue with Google</span>
+            </button>
+          </div>
+          <div class="text-center text-sm text-neutral-400">
+            <span>New here? </span>
+            <button type="button" id="switchToSignUpInline" class="text-white underline">Create account</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  
+  </div>
+
+  <!-- backdrop catch (for click outside) - full area, behind the card but inside overlay -->
+  <button id="authOverlayBackdrop" class="absolute inset-0 w-full h-full bg-transparent" aria-hidden="true"></button>
+</div>
+<!-- ===== end auth modal ===== -->
+
+
+  <footer class="border-t border-red-600/30 mt-24">
+     <div class="mx-auto max-w-7xl px-6 md:px-8 text-sm grid grid-cols-1 md:grid-cols-4 gap-8">
+    <div class="space-y-3">
+      <div class="flex items-center space-x-2">
+        <img src="./assets/logo.png" alt="ViscaraiAssist Logo" class="h-32 w-32 mb-10 rounded-lg shadow-glow">
+        <span class="text-xl font-semibold font-serif text-[#a62d29] mb-20">VisuViewAI</span>
+      </div>
+      <p class="text-[#6b5b55] text-sm">We turn career confusion into career clarity with the power of AI. <br>Our intelligent roadmaps guide you step by step, helping you explore the right opportunities that match your skills and dreams. From discovering career paths<br> to landing your dream job, we make the journey simple, smart, and future-ready.</p>
+      <div class="flex space-x-3 pt-3">
+        <a href="#" class="text-[#6b5b55] hover:text-black "><i class="fab fa-facebook-f"></i></a>
+        <a href="#" class="text-[#6b5b55] hover:text-black"><i class="fab fa-twitter"></i></a>
+        <a href="#" class="text-[#6b5b55] hover:text-black"><i class="fab fa-linkedin-in"></i></a>
+        <a href="#" class="text-[#6b5b55] hover:text-black"><i class="fab fa-instagram"></i></a>
+      </div>
+    </div>
+
+    <div class=" mt-8 ml-8">
+      <h3 class="font-semibold text-[#6b5b55] mb-3">Quick Links</h3>
+      <ul class="space-y-2">
+        <li><a href="#" class="hover:text-black text-[#6b5b55]">Home</a></li>
+        <li><a href="#" class="hover:text-black text-[#6b5b55]">Career Assist</a></li>
+        <li><a href="#" class="hover:text-black text-[#6b5b55]">Take Test</a></li>
+      </ul>
+    </div>
+
+    <div class=" mt-8 ml-8">
+      <h3 class="font-semibold text-[#6b5b55] mb-3">Site Inforamtion</h3>
+      <ul class="space-y-2">
+        <li><a href="#" class="hover:text-black text-[#f98467]">Career Assistant</a></li>
+        <li><a href="#" class="hover:text-black text-[#6b5b55]">Job Recommendations</a></li>
+        <li><a href="#" class="hover:text-black text-[#6b5b55]">AI Interviewer</a></li>
+        <li><a href="#" class="hover:text-black text-[#6b5b55]">MockTests</a></li>
+      </ul>
+    </div>
+
+    <div class=" mt-8 ml-8">
+      <h3 class="font-semibold text-[#6b5b55] mb-3">About Us</h3>
+      <ul class="space-y-2">
+        <li><a href="#" class="hover:text-black text-[#6b5b55]">Contact Us</a></li>
+        <li><a href="#" class="hover:text-black text-[#6b5b55]">Email</a></li>
+      </ul>
+    </div>
+  </div>
+     <!-- Bottom Small tag--> 
+  <div class="mt-8 text-center text-lg text-white">
+    2025 @ VisuViewAI About us | Contact  
+  </div>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VisualDiff AI — Unified Dashboard & Insights</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Phosphor icons (used earlier) -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <style>
+    /* keep a consistent font */
+    body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+    /* small helper to smooth scaling transitions */
+    .scale-smooth { transition: transform 160ms cubic-bezier(.2,.9,.2,1); }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-black via-zinc-900 to-black text-red-400 p-6">
+
+  <!-- HEADER (shared) -->
+  <header class="flex justify-between items-center border-b border-red-800 pb-4 mb-6">
+    <div class="flex items-center gap-2 text-2xl font-bold text-red-500">
+      <span class="bg-red-500 text-black px-2 py-1 rounded-md font-extrabold">V</span>
+      <span class="tracking-tight">isualDiff <span class="text-white">AI</span></span>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <div class="relative">
+        <input
+          type="text"
+          placeholder="Search..."
+          class="bg-zinc-800 border border-red-700 text-red-400 placeholder:text-red-600 pl-10 pr-3 py-2 rounded-lg focus:outline-none w-48 sm:w-64"
+        />
+        <i class="ph-magnifying-glass absolute left-3 top-2.5 text-red-500 text-xl"></i>
+      </div>
+
+      <i class="ph-user text-red-500 text-2xl hover:text-white transition"></i>
+    </div>
+  </header>
+
+  <!-- LAYOUT: shared sidebar + central content (Dashboard + Insights stacked) -->
+  <div class="flex flex-col md:flex-row gap-8">
+    <!-- SIDEBAR (shared) -->
+    <aside class="w-full md:w-56 space-y-4 border-b md:border-b-0 md:border-r border-red-800 pb-4 md:pb-0 pr-0 md:pr-4">
+      <div class="cursor-pointer text-red-400 hover:text-white hover:bg-red-950 rounded-lg px-3 py-2 transition">🏠 Dashboard</div>
+      <div class="cursor-pointer text-red-400 hover:text-white hover:bg-red-950 rounded-lg px-3 py-2 transition">📸 Compare</div>
+      <div class="cursor-pointer text-red-400 hover:text-white hover:bg-red-950 rounded-lg px-3 py-2 transition">📊 Reports</div>
+      <div class="cursor-pointer text-red-400 hover:text-white hover:bg-red-950 rounded-lg px-3 py-2 transition">🧠 AI Chat</div>
+      <div class="cursor-pointer text-red-400 hover:text-white hover:bg-red-950 rounded-lg px-3 py-2 transition">📁 History</div>
+      <div class="cursor-pointer text-red-400 hover:text-white hover:bg-red-950 rounded-lg px-3 py-2 transition">⚙️ Settings</div>
+    </aside>
+
+    <!-- CENTRAL CONTENT: Dashboard first, Insights below (merged, consistent style) -->
+    <main class="flex-1 space-y-8">
+
+      <!-- --- DASHBOARD SECTION --- -->
+      <section class="space-y-6">
+        <h2 class="text-xl font-semibold">Welcome Back, <span class="text-white">User!</span></h2>
+
+        <!-- Stats cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-zinc-900/60 backdrop-blur-md border border-red-800 rounded-2xl shadow-lg hover:shadow-red-800/30 p-4 scale-smooth transform">
+            <h3 class="text-red-400 mb-2">Total Comparisons</h3>
+            <p class="text-3xl text-white font-bold">132</p>
+          </div>
+
+          <div class="bg-zinc-900/60 backdrop-blur-md border border-red-800 rounded-2xl shadow-lg hover:shadow-red-800/30 p-4 scale-smooth transform">
+            <h3 class="text-red-400 mb-2">Changes Detected</h3>
+            <p class="text-3xl text-white font-bold">87</p>
+          </div>
+
+          <div class="bg-zinc-900/60 backdrop-blur-md border border-red-800 rounded-2xl shadow-lg hover:shadow-red-800/30 p-4 scale-smooth transform">
+            <h3 class="text-red-400 mb-2">AI Reports Generated</h3>
+            <p class="text-3xl text-white font-bold">45</p>
+          </div>
+
+          <div class="bg-zinc-900/60 backdrop-blur-md border border-red-800 rounded-2xl shadow-lg hover:shadow-red-800/30 p-4 scale-smooth transform">
+            <h3 class="text-red-400 mb-2">Last Activity</h3>
+            <p class="text-3xl text-white font-bold">3 hrs ago</p>
+          </div>
+        </div>
+
+        <!-- Recent Projects -->
+        <div>
+          <h3 class="text-lg font-semibold mb-4">📁 Recent Projects</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-zinc-900/70 backdrop-blur-md border border-red-700 p-4 rounded-2xl hover:border-red-500 transition">
+              <h4 class="text-white font-semibold">Project #1: Factory</h4>
+              <p class="text-sm text-red-400">Last compared: 2 days ago</p>
+            </div>
+
+            <div class="bg-zinc-900/70 backdrop-blur-md border border-red-700 p-4 rounded-2xl hover:border-red-500 transition">
+              <h4 class="text-white font-semibold">Project #2: Bridge</h4>
+              <p class="text-sm text-red-400">Last compared: 1 week ago</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload CTA -->
+        <div class="flex justify-center">
+          <button class="bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-xl flex items-center gap-2">
+            <i class="ph-upload-simple text-xl"></i>
+            Upload New Comparison
+          </button>
+        </div>
+      </section>
+
+      <!-- --- INSIGHTS & REPORTS SECTION (merged below dashboard) --- -->
+      <section class="space-y-6">
+        <h2 class="text-xl font-semibold text-white">📊 Insights & Reports</h2>
+
+        <!-- Graph Card (STATIC PLACEHOLDER) -->
+        <div class="bg-zinc-900/60 backdrop-blur-md border border-red-800 rounded-2xl shadow-lg p-4">
+          <h3 class="text-red-400 font-semibold mb-4">Change % Over Time</h3>
+
+          <!-- Static placeholder area (keeps look consistent) -->
+          <div class="w-full h-64 bg-black/40 rounded-lg flex items-center justify-center text-gray-400">
+            <!-- static visual placeholder — no interactive chart library used -->
+            <div class="text-center">
+              <svg width="220" height="120" viewBox="0 0 220 120" fill="none" xmlns="http://www.w3.org/2000/svg" class="mx-auto mb-3 opacity-80">
+                <rect x="0.5" y="0.5" width="219" height="119" rx="8" stroke="#ff000030" fill="#0b0b0b"/>
+                <polyline points="10,90 40,60 70,70 100,40 130,50 160,30 190,50" stroke="#ff5555" stroke-width="3" fill="none" stroke-linejoin="round"/>
+                <circle cx="160" cy="30" r="4" fill="#ff0000"/>
+                <circle cx="100" cy="40" r="4" fill="#FFD166"/>
+                <circle cx="40" cy="60" r="4" fill="#5AEF8A"/>
+              </svg>
+              <div class="text-sm text-red-500">• Line chart with green/yellow/red severity markers (static)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Insight Logs (same style as original) -->
+        <div class="bg-zinc-900/70 backdrop-blur-md border border-red-700 rounded-2xl shadow-lg p-4">
+          <h3 class="text-red-400 font-semibold mb-4">AI Insight Logs</h3>
+          <ul class="space-y-3">
+            <li class="bg-zinc-800/60 border border-red-800 rounded-xl p-3 hover:border-red-500 transition">
+              <p class="text-white font-medium">Project: Factory Floor</p>
+              <p class="text-sm text-red-400">Last week → “Degradation +12%”</p>
+            </li>
+            <li class="bg-zinc-800/60 border border-red-800 rounded-xl p-3 hover:border-red-500 transition">
+              <p class="text-white font-medium">Project: Bridge</p>
+              <p class="text-sm text-red-400">Yesterday → “2 new cracks detected”</p>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Action Buttons (Download / Share) -->
+        <div class="flex justify-center flex-wrap gap-6">
+          <button class="bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-xl flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 4.5v15M19.5 12.75h-15" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Download Report PDF
+          </button>
+
+          <button class="bg-zinc-800 hover:bg-red-700 border border-red-700 text-red-400 hover:text-white font-semibold px-6 py-3 rounded-xl flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4.5 12.75l7.5-7.5 7.5 7.5M12 5.25v13.5" stroke="#ff5555" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Share Report
+          </button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Minimal JS for hover scale (keeps the subtle motion from original) -->
+  <script>
+    // Add small scale on hover for cards that originally had motion/framer effects
+    document.querySelectorAll('.scale-smooth').forEach(el => {
+      el.addEventListener('mouseenter', () => el.style.transform = 'scale(1.05)');
+      el.addEventListener('mouseleave', () => el.style.transform = 'scale(1)');
+    });
+  </script>
+</body>
+</html>
